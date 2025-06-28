@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import cm
+import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from measurements_detectors import Measure
 from project_tools import create_product_name
@@ -104,7 +104,7 @@ class Plotter:
             # Plotting rings
             radii = kwargs["radii"]
             dr_str = str(round(kwargs["dr"] / PIXEL_TO_MM_RATIO, 2))
-            for radius in radii:
+            for radius in (radii / PIXEL_TO_MM_RATIO):
                 circle = plt.Circle((0, 0), radius, color='gray', fill=False, alpha=0.5)
                 ax.add_patch(circle)
             ax.plot([], [], label=f"$dr={dr_str} mm $", color="white")
