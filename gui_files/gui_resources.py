@@ -190,13 +190,12 @@ class BaseAnalysisWindow(QMainWindow):
 
 
     def _connect_zoom(self):
-        """Connect zoom functionality to the matplotlib canvas."""
+        """Connect zoom and pan functionality to the matplotlib canvas."""
         def zoom_factory_figure(fig, base_scale=1.1):
             def zoom(event):
                 for ax in fig.axes:
                     if event.inaxes != ax:
                         continue
-                    # Ignore zoom if event.xdata or ydata is None (e.g., mouse not over data)
                     if event.xdata is None or event.ydata is None:
                         continue
                     cur_xlim = ax.get_xlim()
@@ -218,7 +217,41 @@ class BaseAnalysisWindow(QMainWindow):
                 fig.canvas.draw_idle()
             return zoom
 
+        def pan_factory_figure(fig):
+            state = {"press": None, "xlim": None, "ylim": None}
+
+            def on_press(event):
+                if event.button == 1 and event.inaxes:  # Left mouse button
+                    state["press"] = (event.x, event.y)
+                    state["xlim"] = event.inaxes.get_xlim()
+                    state["ylim"] = event.inaxes.get_ylim()
+
+            def on_release(event):
+                state["press"] = None
+
+            def on_motion(event):
+                if state["press"] is None or event.inaxes is None:
+                    return
+                dx = event.x - state["press"][0]
+                dy = event.y - state["press"][1]
+                ax = event.inaxes
+                # Calculate the movement in data coordinates
+                xlim = state["xlim"]
+                ylim = state["ylim"]
+                width = xlim[1] - xlim[0]
+                height = ylim[1] - ylim[0]
+                # Sensitivity factor (adjust as needed)
+                factor = 0.005
+                ax.set_xlim(xlim[0] - dx * width * factor, xlim[1] - dx * width * factor)
+                ax.set_ylim(ylim[0] + dy * height * factor, ylim[1] + dy * height * factor)
+                fig.canvas.draw_idle()
+
+            fig.canvas.mpl_connect('button_press_event', on_press)
+            fig.canvas.mpl_connect('button_release_event', on_release)
+            fig.canvas.mpl_connect('motion_notify_event', on_motion)
+
         self.canvas.mpl_connect('scroll_event', zoom_factory_figure(self.figure))
+        pan_factory_figure(self.figure)
 
     def reset_zoom(self):
         """Reset all axes to autoscale (default zoom)."""

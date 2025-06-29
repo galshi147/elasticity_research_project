@@ -2,7 +2,7 @@ from gui_files.scripter import Scripter
 from PySide6.QtWidgets import QInputDialog
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QDialog
-from gui_files.dialogs import AnimateTrajDialog
+from gui_files.dialogs import AnimateTrajDialog, KBufferDialog
 
 class VecFieldAnalyzerScripter(Scripter):
     def __init__(self, window):
@@ -13,8 +13,12 @@ class VecFieldAnalyzerScripter(Scripter):
         }
 
     def run_k_buffer(self):
-        k, ok = QInputDialog.getInt(self.window, "K Buffer", "Enter k value:", 10, 1, 1000, 1)
-        if not ok:
+        # Ask user for k value and delay
+        dialog = KBufferDialog(self.window)
+        if dialog.exec() != QDialog.Accepted:
+            return
+        k, delay_sec = dialog.get_values()
+        if None in (k, delay_sec):
             return
 
         # Set up animation state on the window
@@ -29,7 +33,7 @@ class VecFieldAnalyzerScripter(Scripter):
             self.window.k_buffer_timer.stop()
         self.window.k_buffer_timer = QTimer(self.window)
         self.window.k_buffer_timer.timeout.connect(lambda: self._k_buffer_step())
-        self.window.k_buffer_timer.start(100)  # ms between steps
+        self.window.k_buffer_timer.start(delay_sec * 1000)  # ms between steps
 
     def _k_buffer_step(self):
         if self.window.stop_script:

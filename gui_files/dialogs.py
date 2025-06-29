@@ -3,6 +3,36 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QDoubleSpinBox
 )
 
+class KBufferDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("K Buffer Parameters")
+        layout = QFormLayout(self)
+        self.k_spin = QSpinBox()
+        self.k_spin.setRange(1, 1000)  # Set a reasonable range for k
+        self.k_spin.setValue(10)
+        layout.addRow("K Value:", self.k_spin)
+        self.delay_edit = QDoubleSpinBox()
+        self.delay_edit.setDecimals(2)
+        self.delay_edit.setSingleStep(0.1)
+        self.delay_edit.setRange(0.0, 10.0)
+        self.delay_edit.setValue(0.1)
+        layout.addRow("Delay between steps (seconds):", self.delay_edit)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+    
+    def get_values(self):
+        try:
+            k_value = self.k_spin.value()
+            delay_sec = self.delay_edit.value()
+            return k_value, delay_sec
+        except Exception:
+            print("Error getting values from KBufferDialog dialog")
+            return None, None
+
+
 class DisplacementVideoDialog(QDialog):
             def __init__(self, parent, start_val, end_val, interval_val, min_frame, max_frame):
                 super().__init__(parent)
