@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget
-from old.vec_field_analyzer_old import VectorFieldAnalyzer
-from particle_tracker import ParticleTracker
+from gui_files.vec_field_analyzer import VectorFieldAnalyzer
+from gui_files.particle_tracker import ParticleTracker
 from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Qt
 

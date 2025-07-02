@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib import cm
+import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from measurements_detectors import Measure
 from project_tools import create_product_name
@@ -104,7 +104,7 @@ class Plotter:
             # Plotting rings
             radii = kwargs["radii"]
             dr_str = str(round(kwargs["dr"] / PIXEL_TO_MM_RATIO, 2))
-            for radius in radii:
+            for radius in (radii / PIXEL_TO_MM_RATIO):
                 circle = plt.Circle((0, 0), radius, color='gray', fill=False, alpha=0.5)
                 ax.add_patch(circle)
             ax.plot([], [], label=f"$dr={dr_str} mm $", color="white")
@@ -112,7 +112,7 @@ class Plotter:
         # plt.show()
         return ax, colorbar
 
-    def plot_particles_trajectories(self, ax: plt.Axes, trajectories: np.ndarray, selected_particles: np.ndarray = None):
+    def plot_particles_trajectories(self, ax: plt.Axes, frame1_num, frame2_num, trajectories: np.ndarray, selected_particles: np.ndarray = None):
         x = trajectories[:, :, 0] / PIXEL_TO_MM_RATIO  # shape: (num_frames, num_particles)
         y = trajectories[:, :, 1] / PIXEL_TO_MM_RATIO  # shape: (num_frames, num_particles)
         if selected_particles is not None:
@@ -128,7 +128,6 @@ class Plotter:
         alphas = np.linspace(0.3, 1.0, num_frames)  # shape: (num_frames,)
 
         # Broadcast base colors and alphas to all points
-        # base_colors[:, :3] is (num_particles, 3), alphas[:, None] is (num_frames, 1)
         rgb = np.repeat(base_colors[np.newaxis, :, :3], num_frames, axis=0)  # (num_frames, num_particles, 3)
         alpha = np.repeat(alphas[:, np.newaxis], num_particles, axis=1)[..., np.newaxis]  # (num_frames, num_particles, 1)
         colors_all = np.concatenate([rgb, alpha], axis=2).reshape(-1, 4)  # (num_frames*num_particles, 4)
@@ -137,7 +136,8 @@ class Plotter:
 
         circle = plt.Circle((0, 0), TOTAL_SYSTEM_RADIUS, color='gray', fill=False, alpha=0.5)
         ax.add_patch(circle)
-        ax.set_title("Particle Trajectories")
+        ax.grid(True, alpha=0.5)
+        ax.set_title(fr"Particle Trajectories: DSC_{frame1_num:04d} $\rightarrow$ DSC_{frame2_num:04d} ({self.source})")
         ax.set_xlabel("x [mm]")
         ax.set_ylabel("y [mm]")
         ax.axis('equal')

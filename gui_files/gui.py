@@ -1,7 +1,7 @@
 import sys
 from measurements_detectors import Measure
 from PySide6.QtWidgets import QApplication
-from welcome_window import WelcomeWindow
+from gui_files.welcome_window import WelcomeWindow
 
 # === GUI Class ===
 

@@ -1,24 +1,22 @@
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
-from measurements_detectors import Measure
-from visualization import Plotter
-from calculator import Calculator
-from gui_scripts import SCRIPT_DICT
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QComboBox, QSpinBox, QFileDialog, QFormLayout, QSizePolicy, 
-    QDialog, QDialogButtonBox
+    QApplication, QPushButton, QSpinBox, QFileDialog, QFormLayout, QSizePolicy, QDialog
 )
-
-from PySide6.QtCore import Qt, QTimer
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from gui_resources import BaseAnalysisWindow, VideoParamsDialog ,SPECIAL_SPINBOX_STYLE, MEASURE_TITLE_STYLE
+from measurements_detectors import Measure
+from visualization import Plotter
+from calculator import Calculator
+
+from gui_files.gui_scripts import VecFieldAnalyzerScripter
+from gui_files.gui_resources import BaseAnalysisWindow ,SPECIAL_SPINBOX_STYLE, MEASURE_TITLE_STYLE
+from gui_files.dialogs import DisplacementVideoDialog
+
 MAX_RINGS_NUM = 500
 DEFAULT_RINGS_NUM = 100
 MAX_RING_JUMP = 100
@@ -28,17 +26,15 @@ DEFAULT_RINGS_JUMP = 1
 # === Main Window Class ===
 class VectorFieldAnalyzer(BaseAnalysisWindow):
     def __init__(self, measure: Measure, source: str):
-        super().__init__(measure.get_total_frames_num())
+        super().__init__(measure, source, scripter=VecFieldAnalyzerScripter)
         self.setWindowTitle("Vector Field Analyzer (PySide6)")
-        self.measure = measure
-        self.source = source
         self.plotter = Plotter(measure, source)
         self.calculator = Calculator(measure)
         self.measure_stat = self.measure.load_measure_data(source='drive')["statistic"]
         self.vector_field = {}
         self.add_rings = True
-        self.stop_script = False
         self.init_ui()
+        self._connect_zoom()
 
     def init_ui(self):
         # === Rings jump selector ===
@@ -65,32 +61,12 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
         self.controls_layout.addLayout(rings_jump_layout)
         self.controls_layout.addLayout(rings_layout)
         self.controls_layout.addWidget(add_rings_btn)
-        
-        # === Add scripts layout ===
-        scripts_layout = QHBoxLayout()
-        script_box_layout = QFormLayout()
-        self.script_box = QComboBox()
-        self.script_box.addItems(["Choose Script"] + list(SCRIPT_DICT.keys()))  # Add script options
-        self.script_box.currentIndexChanged.connect(self.on_script_selected)  # Connect selection change to a method
-        script_box_layout.addRow("Select Script:", self.script_box)
-        scripts_layout.addLayout(script_box_layout)
-        self.stop_btn = QPushButton("Stop Script")
-        self.stop_btn.setStyleSheet("background-color: #FF8F8F; color: black;")
-        self.stop_btn.clicked.connect(self.stop_running_script)
-        scripts_layout.addWidget(self.stop_btn)
-        self.save_video_btn = QPushButton("Save Video")
-        self.save_video_btn.setStyleSheet("background-color: #677DFD; color: black;")
-        self.save_video_btn.clicked.connect(self.save_video)
-        scripts_layout.addWidget(self.save_video_btn)
-        
-        self.main_layout.addLayout(scripts_layout)
 
 
         # === Matplotlib Canvas ===
         self.figure, (self.ax_vf, self.ax_av) = plt.subplots(1, 2)
         title = self.figure.suptitle(f"Measurement: {self.measure.get_name()}", fontsize=16,  x=0.5, y=0.98)
         title.set_bbox(MEASURE_TITLE_STYLE)
-        
 
         self.figure.subplots_adjust(left=0.05, right=0.95, top=0.92, bottom=0.08)  # Reduce plot margins
 
@@ -101,33 +77,7 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
 
         self.main_layout.addWidget(self.canvas)
     
-    def on_script_selected(self, index):
-        """Handle script selection from the combobox."""
-        selected_script = self.script_box.itemText(index)
-        if index > 0:  # Ignore "Choose Script"
-            if selected_script in SCRIPT_DICT:
-                # Show "<script name> - running..." in the combobox
-                self.script_box.blockSignals(True)
-                self.script_box.setItemText(index, f"{selected_script} - running...")
-                self.script_box.setCurrentIndex(index)
-                self.script_box.blockSignals(False)
-                # Store the running script name for later reset
-                self._running_script_index = index
-                self._running_script_name = selected_script
-                SCRIPT_DICT[selected_script](self)
-            
-    def stop_running_script(self):
-        self.stop_btn.setEnabled(False)  # Disable the button to prevent multiple clicks
-        self.stop_script = True
-        # Reset combobox to default and restore script name
-        if hasattr(self, "_running_script_index") and hasattr(self, "_running_script_name"):
-            self.script_box.blockSignals(True)
-            self.script_box.setItemText(self._running_script_index, self._running_script_name)
-            self.script_box.setCurrentIndex(0)
-            self.script_box.blockSignals(False)
-            del self._running_script_index
-            del self._running_script_name
-        self.stop_btn.setEnabled(True)  # Re-enable the button after stopping
+
     
     def save_video(self):
         self.save_video_btn.setEnabled(False)  # Disable the button to prevent multiple clicks
@@ -139,7 +89,7 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
             # Create a dialog for user to select start frame, end frame, and interval
             min_frame = self.frame1.minimum()
             max_frame = self.frame2.maximum()
-            dialog = VideoParamsDialog(
+            dialog = DisplacementVideoDialog(
                 self,
                 self.frame1.value(),
                 self.frame2.value(),
@@ -191,9 +141,9 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
 
             # Save animation
             if file_path.endswith('.gif'):
-                anim.save(file_path, writer='imagemagick', fps=dialog.get_fps())
+                anim.save(file_path, writer='imagemagick', fps=dialog.get_fps(), dpi=300)
             else:
-                anim.save(file_path, writer='ffmpeg', fps=dialog.get_fps())
+                anim.save(file_path, writer='ffmpeg', fps=dialog.get_fps(), dpi=300)
 
             plt.close(temp_fig)  # Close the temp figure
 
@@ -205,7 +155,6 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
             self.save_video_btn.setEnabled(True)  # Re-enable the button after saving
             QApplication.processEvents()  # Update UI
 
-    # === loading vector field data ===
     def load_vector_field_data(self, first_frame_name, second_frame_name) -> tuple:
         """_summary_
 
@@ -221,7 +170,6 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
         except FileNotFoundError:
             print(f"==== check existance of {first_frame_name}_{second_frame_name} in vector_field folder of measure: {self.measure.get_name()} ====")
 
-    # === displacement calculation ===
     def calculate_displacement_stats(self, x: np.array, y: np.array, u, v) -> tuple:
         """_summary_
 
@@ -258,13 +206,22 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
             colorbar = None
         
         # Plot the updated data
-        self.ax_av = self.plotter.plot_displacement_by_rings(ax_av, self.measure_stat, frame1, frame2, radii, rad_disp, tan_disp)
+        ax_av = self.plotter.plot_displacement_by_rings(ax_av, self.measure_stat, frame1, frame2, radii, rad_disp, tan_disp)
         ax_vf, colorbar = self.plotter.plot_vector_field(ax_vf, x, y, u, v, frame1, frame2, add_rings=self.add_rings, radii=radii, dr=dr)
         return ax_vf, ax_av, figure, colorbar
     
     def update_plot(self) -> None:
         self.update_btn.setEnabled(False)  # Disable the button to prevent multiple clicks
+        vf_xlim, av_xlim = self.ax_vf.get_xlim(), self.ax_av.get_xlim()  # Save current zoom (axes limits)
+        vf_ylim, av_ylim = self.ax_vf.get_ylim(), self.ax_av.get_ylim()  # Save current zoom (axes limits)
         self.ax_vf, self.ax_av, self.figure, self.colorbar = self.draw_plot(self.ax_vf, self.ax_av, self.figure, self.colorbar, self.frame1.value(), self.frame2.value())
+        if hasattr(self, "_has_updated"): # Avoid restoring zoom on the first update
+            self.ax_vf.set_xlim(vf_xlim) # Restore zoom (axes limits)
+            self.ax_vf.set_ylim(vf_ylim)
+            self.ax_av.set_xlim(av_xlim)
+            self.ax_av.set_ylim(av_ylim)
+        else:
+            self._has_updated = True
         self.canvas.draw() # Redraw the canvas
         self.green_blink_button()
         self.update_btn.setEnabled(True)
