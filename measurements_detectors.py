@@ -206,6 +206,14 @@ class Measure:
         """
         return self.detector.get_center_disk_radius()
     
+    def get_frame_center(self) -> tuple:
+        """Get the center of the frame.
+
+        Returns:
+            tuple: (center_x, center_y) of the frame in pixels
+        """
+        return self.detector.get_frame_center()
+    
     def save_bw_version(self, frame_name: str) -> np.ndarray:
         """_summary_
 
