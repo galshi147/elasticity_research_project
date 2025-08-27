@@ -8,9 +8,10 @@ from programs import test_detection
 from pathlib import Path
 
 def main():
-    m = Measure("26.01.25", path_setting='drive')
+    m = Measure("26.01.25", path_setting='local')
     gui = Gui(m, "Kdt")
     gui.run()
     
+    # test_detection(m)
     
 main()

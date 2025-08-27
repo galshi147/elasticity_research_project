@@ -6,12 +6,15 @@ from project_tools import create_product_name
 import pandas as pd
 from tqdm import tqdm
 
+MAX_SINGLE_DISPLACEMENT = 2 * SMALL_DISK_RADIUS * PIXEL_TO_MM_RATIO # pixels
+
 class Kdt:
     def __init__(self, measure: Measure):
         self.measure = measure
         self.measure_name = self.measure.get_name()
         self.vector_field_path = self.measure.get_vector_field_path()
         self.measure_data = self.measure.load_measure_data(source='drive')
+        self.frame_center = self.measure.get_frame_center()
         self.source = Kdt.__name__
 
     def get_source_name(self):
@@ -31,8 +34,7 @@ class Kdt:
         distances, indices = tree.query(frame1_centers)
 
         # Filter out bad matches
-        max_distance = 2 * SMALL_DISK_RADIUS * PIXEL_TO_MM_RATIO
-        valid = distances < max_distance
+        valid = distances < MAX_SINGLE_DISPLACEMENT
         valid_indices = indices[valid]
         matched_frame1 = frame1_centers[valid]
         matched_frame2 = frame2_centers[valid_indices]
@@ -75,11 +77,10 @@ class Kdt:
         positions = np.full((len(centers_arrays), max_particles, 2), 0, dtype=float)
         for i, arr in enumerate(centers_arrays):
             positions[i, :arr.shape[0], :] = arr
-        # Center the positions around the mean
-        mean_x = positions[:, :, 0].mean(axis=1, keepdims=True)
-        mean_y = positions[:, :, 1].mean(axis=1, keepdims=True)
-        positions[:, :, 0] -= mean_x
-        positions[:, :, 1] -= mean_y
+        
+        # Center the positions around the frame center
+        positions[:, :, 0] -= self.frame_center[0]
+        positions[:, :, 1] -= self.frame_center[1]
         
         # Initialize trajectories with the first frame's positions
         num_frames = positions.shape[0]
@@ -91,8 +92,15 @@ class Kdt:
             prev_centers = trajectories[i-1]
             curr_centers = positions[i]
             tree = KDTree(curr_centers)
-            _, indices = tree.query(prev_centers)
-            # Assign matched positions
+            distances, indices = tree.query(prev_centers)
+            
+            # Filter out bad matches
+            # valid = distances < MAX_SINGLE_DISPLACEMENT
+            # valid_indices = indices[valid]
+            # # Assign matched positions
+            # trajectories[i] = trajectories[i-1].copy()  # Copy previous frame's trajectory
+            # trajectories[i][valid] = curr_centers[valid_indices]
+            
             trajectories[i] = curr_centers[indices]
 
         return trajectories

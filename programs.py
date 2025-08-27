@@ -105,7 +105,7 @@ def test_drive_connection():
     print(m.get_frame_names())
     print(m.get_total_frames_num())
 
-def test_detection(m: Measure, start=0, stop=10):
+def test_detection(m: Measure, start=0, stop=2):
     frame_names = m.get_frame_names()[start:stop]
     detector = m.detector
     for frame in frame_names:

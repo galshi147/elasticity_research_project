@@ -33,7 +33,7 @@ class Calculator():
             mask = magnitude <= LARGE_DISK_RADIUS / 2
             x, y, u, v = x[mask], y[mask], u[mask], v[mask]
             # Center the coordinates
-            x0, y0 = np.mean(x), np.mean(y)
+            x0, y0 = self.measure.get_frame_center()
             rx = x - x0
             ry = y - y0
             r = np.sqrt(rx**2 + ry**2)

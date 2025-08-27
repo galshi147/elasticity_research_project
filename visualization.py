@@ -68,8 +68,9 @@ class Plotter:
         Raises:
             KeyError: If required keyword arguments for rings are missing when add_rings is True.
         """
-        x = (x - np.mean(x)) / PIXEL_TO_MM_RATIO # Centerlize and Convert to mm
-        y = (y - np.mean(y)) / PIXEL_TO_MM_RATIO  
+        x0, y0 = self.measure.get_frame_center()
+        x = (x - x0) / PIXEL_TO_MM_RATIO # Centerlize and Convert to mm
+        y = (y - y0) / PIXEL_TO_MM_RATIO  
         magnitude = np.sqrt(u**2 + v**2) / PIXEL_TO_MM_RATIO  # Convert to mm
         magnitude[magnitude == 0] = np.nan
         # fig, ax = plt.subplots()
@@ -110,6 +111,8 @@ class Plotter:
             ax.plot([], [], label=f"$dr={dr_str} mm $", color="white")
         ax.legend()
         # plt.show()
+        circle = plt.Circle((0, 0), TOTAL_SYSTEM_RADIUS, color='red', fill=False, alpha=1)
+        ax.add_patch(circle)
         return ax, colorbar
 
     def plot_particles_trajectories(self, ax: plt.Axes, frame1_num, frame2_num, trajectories: np.ndarray, selected_particles: np.ndarray = None):
