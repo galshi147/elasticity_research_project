@@ -3,11 +3,12 @@
 A Python-based research tool for analyzing particle trajectories and vector fields in elasticity experiments using computer vision and particle tracking methods.
 
 ## Overview
-
+The physical system exemined is a circular frame filled with little Clear-Flex disks and a silicon disk at the center which inflates
+and by that create stress in the system and an elastic respond.
 This project provides a comprehensive suite of tools for:
-- Particle detection and tracking in image sequences
-- Vector field analysis and visualization
+- Particle detection (disks centers') and tracking in image sequences
 - Displacement measurement and calculation
+- Vector field analysis (displacement field) and visualization
 - Interactive GUI for real-time analysis
 
 ## Project Structure
@@ -20,32 +21,32 @@ elasticity_research_project/
 │
 ├── Core Analysis Modules:
 ├── calculator.py               # Mathematical calculations and computations
-├── detection_lib.py           # Particle detection algorithms
-├── kdt_method.py              # K-D Tree based particle tracking
-├── piv_method.py              # Particle Image Velocimetry implementation
+├── detection_lib.py            # Particle detection algorithms
+├── kdt_method.py               # K-D Tree Algorithm based particle tracking
+├── piv_method.py               # Particle Image Velocimetry (PIV) based particle tracking
 ├── measurements_detectors.py   # Measurement data handling
-├── visualization.py           # Plotting and visualization utilities
-├── project_tools.py           # Common project utilities
-├── programs.py                # Test programs and examples
+├── visualization.py            # Plotting and visualization utilities
+├── project_tools.py            # Common project utilities
+├── programs.py                 # Test programs and examples
 │
 ├── GUI Components:
 ├── gui_files/
-│   ├── gui.py                 # Main GUI application
-│   ├── gui_resources.py       # Base window classes and resources
-│   ├── gui_scripts.py         # Animation and scripting functionality
-│   ├── dialogs.py             # Dialog boxes for user input
-│   ├── particle_tracker.py    # Particle tracking GUI window
-│   ├── vec_field_analyzer.py  # Vector field analysis GUI window
-│   ├── scripter.py            # Base scripting functionality
-│   └── welcome_window.py      # Welcome/startup window
+│   ├── gui.py                  # Main GUI application
+│   ├── gui_resources.py        # Base window classes and resources
+│   ├── gui_scripts.py          # Animation and scripting functionality
+│   ├── dialogs.py              # Dialog boxes for user input
+│   ├── particle_tracker.py     # Particle tracking GUI window
+│   ├── vec_field_analyzer.py   # Vector field analysis GUI window
+│   ├── scripter.py             # Base scripting functionality
+│   └── welcome_window.py       # Welcome/startup window
 │
 └── measurements/              # Experimental data directory
-    └── 26.01.25/             # Date-organized measurement folders
+    └── 26.01.25/              # Date-organized measurement folders
         ├── raw_data/          # Original images
-        ├── dot/              # Processed dot images
-        ├── graph/            # Generated graphs and plots
-        ├── vector_field/     # Vector field data files
-        └── *.pkl             # Saved measurement data
+        ├── dot/               # Processed dot images (centers of disks)
+        ├── graph/             # Generated graphs and plots
+        ├── vector_field/      # Vector field data files
+        └── *.pkl              # Saved measurement data
 ```
 
 ## Features
@@ -188,13 +189,6 @@ measure = Measure("26.01.25", path_setting='drive')
 - Tracking parameters in `kdt_method.py`
 - Visualization settings in `visualization.py`
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
 
 ## Research Applications
 
@@ -205,6 +199,3 @@ This tool is designed for elasticity research applications including:
 - Particle tracking in soft materials
 - Flow visualization studies
 
-## License
-
-[Add your license information here]
