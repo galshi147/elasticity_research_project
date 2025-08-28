@@ -104,3 +104,69 @@ class Kdt:
             trajectories[i] = curr_centers[indices]
 
         return trajectories
+    
+    def build_trajectories_robust(self):
+        """
+        Enhanced particle tracking with proper coordinate handling
+        """
+        positions = self.measure_data['centers']
+        centers_arrays = [np.vstack(centers) for centers in positions]
+        
+        # Calculate the true center from all particle data
+        all_particles = np.vstack(centers_arrays)
+        true_center = np.mean(all_particles, axis=0)
+        
+        print(f"Frame center from detector (x,y): {self.frame_center}")
+        print(f"Calculated true center (x,y): {true_center}")
+        
+        # IMPORTANT: Ensure consistent (x,y) coordinate system
+        # self.frame_center is already in (x,y) format from OpenCV
+        # particle centers should also be in (x,y) format
+        
+        # Start with first frame (centered using true center)
+        first_frame = centers_arrays[0] - true_center  # Remove the coordinate swap
+        trajectories = [first_frame]
+        
+        for frame_idx in range(1, len(centers_arrays)):
+            prev_particles = trajectories[-1]
+            curr_particles = centers_arrays[frame_idx] - true_center  # Use true center consistently
+            
+            if len(prev_particles) == 0 or len(curr_particles) == 0:
+                trajectories.append(curr_particles)
+                continue
+            
+            tree_curr = KDTree(curr_particles)
+            dist_forward, idx_forward = tree_curr.query(prev_particles)
+            
+            tree_prev = KDTree(prev_particles)
+            dist_backward, idx_backward = tree_prev.query(curr_particles)
+            
+            valid_forward = dist_forward < MAX_SINGLE_DISPLACEMENT
+            mutual_matches = np.zeros(len(prev_particles), dtype=bool)
+            
+            for i, (valid, curr_idx) in enumerate(zip(valid_forward, idx_forward)):
+                if valid:
+                    if idx_backward[curr_idx] == i and dist_backward[curr_idx] < MAX_SINGLE_DISPLACEMENT:
+                        mutual_matches[i] = True
+            
+            new_positions = prev_particles.copy()
+            new_positions[mutual_matches] = curr_particles[idx_forward[mutual_matches]]
+            
+            matched_curr_indices = idx_forward[mutual_matches]
+            unmatched_curr = np.setdiff1d(np.arange(len(curr_particles)), matched_curr_indices)
+            
+            if len(unmatched_curr) > 0:
+                new_particles = curr_particles[unmatched_curr]
+                new_positions = np.vstack([new_positions, new_particles])
+            
+            trajectories.append(new_positions)
+        
+        # Convert to standard format
+        max_particles = max(len(traj) for traj in trajectories)
+        result = np.zeros((len(trajectories), max_particles, 2))
+        
+        for i, traj in enumerate(trajectories):
+            if len(traj) > 0:
+                result[i, :len(traj), :] = traj
+        
+        return result

@@ -68,7 +68,8 @@ class Plotter:
         Raises:
             KeyError: If required keyword arguments for rings are missing when add_rings is True.
         """
-        x0, y0 = self.measure.get_frame_center()
+        # y0, x0 = self.measure.get_frame_center()
+        x0, y0 = np.mean(x), np.mean(y)
         x = (x - x0) / PIXEL_TO_MM_RATIO # Centerlize and Convert to mm
         y = (y - y0) / PIXEL_TO_MM_RATIO  
         magnitude = np.sqrt(u**2 + v**2) / PIXEL_TO_MM_RATIO  # Convert to mm

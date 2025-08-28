@@ -28,16 +28,16 @@ def test_build_trajectories(measure: Measure, image_folder: str):
         ax.imshow(
             img,
             cmap='gray',
-            # extent=[
-            # -x0, img.shape[1] - x0,
-            # -y0, img.shape[0] - y0
-            # ],
+            extent=[
+            -x0, img.shape[1] - x0,
+            -y0, img.shape[0] - y0
+            ],
             alpha=0.75,
-            origin='lower'
+            origin='upper'
         )
-        # ax.set_xlim(-x0, img.shape[1] - x0)
-        # ax.set_ylim(-y0, img.shape[0] - y0)
-        centers = trajectories[i]
+        ax.set_xlim(-x0, img.shape[1] - x0)
+        ax.set_ylim(-y0, img.shape[0] - y0)
+        centers = np.column_stack([trajectories[i][:, 0], img.shape[0] - trajectories[i][:, 1]])
 
         # Plot circles and labels
         for idx, (x, y) in enumerate(centers):
@@ -59,7 +59,8 @@ def test_build_trajectories(measure: Measure, image_folder: str):
             #     next_x, next_y = trajectories[i+1, idx]
             #     if not (np.isnan(next_x) or np.isnan(next_y)):
             #         ax.plot([x, next_x], [y, next_y], 'g-', lw=1)
-        system_border = plt.Circle((img.shape[1] // 2, img.shape[0] // 2), TOTAL_SYSTEM_RADIUS * PIXEL_TO_MM_RATIO, color='blue', fill=False, alpha=1)
+        # system_border = plt.Circle((img.shape[1] // 2, img.shape[0] // 2), TOTAL_SYSTEM_RADIUS * PIXEL_TO_MM_RATIO, color='blue', fill=False, alpha=1)
+        system_border = plt.Circle((0, 0), TOTAL_SYSTEM_RADIUS * PIXEL_TO_MM_RATIO, color='blue', fill=False, alpha=1)
         ax.add_patch(system_border)
         system_border_2 = plt.Circle((x0, y0), TOTAL_SYSTEM_RADIUS * PIXEL_TO_MM_RATIO, color='k', fill=False, alpha=1)
         ax.add_patch(system_border_2)
