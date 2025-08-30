@@ -2,6 +2,7 @@ from detection_lib import CenterDisk, Configuration, Detector, cv2, np, Path, PI
 from matplotlib import pyplot as plt
 import pandas as pd
 from tqdm import tqdm
+from database_manager import DatabaseManager
 
 BASE_PATH = (Path(__file__).parent / "measurements").resolve()
 RAW_DATA = "raw_data"
@@ -82,12 +83,13 @@ CONFIGURES = {
 class Measure:
     """This class represents a Measurement object, which include the data taken from the lab.
     """
-    def __init__(self, measurement_name: str, path_setting: str = 'local', **kwargs) -> None:
+    def __init__(self, measurement_name: str, path_setting: str = 'local', use_database: bool = True, **kwargs) -> None:
         """_summary_
 
         Args:
             measurement_name (str): The name of the measurement. It should be one of the keys in CONFIGURES, in the format 'dd.mm.yy'.
             path_setting (str, optional): The path setting for the measurement. It can be 'local', 'drive' or 'manual'. Defaults to 'local'.
+            use_database (bool, optional): Whether to use the database manager to save/load data. Defaults to True.
             **kwargs: Additional keyword arguments. If path_setting is 'manual', a dictionary with the paths must be provided under the key 'manual_path_dict'.
             Raises:
                 ValueError: If the measurement name is not in CONFIGURES or if the path_setting is not one of 'local', 'drive', or 'manual'.
@@ -99,6 +101,10 @@ class Measure:
         self.frame_names = sorted(file.name for file in self.raw_data_path.iterdir() if file.is_file() and file.suffix.lower() == '.jpg')
         self.total_frames_num = sum(1 for _ in self.drive_path.glob("*.jpg"))
         self.detector = Detector(self.raw_data_path, self.frame_names[0], CONFIGURES[measurement_name])
+        self.use_database = use_database
+        if self.use_database:
+            self.db_manager = DatabaseManager()
+            self.measurement_id = self.db_manager.create_measurement(measurement_name)
     
     def set_path_config(self, manual_path_dict: dict = None) -> None:
 
@@ -303,6 +309,33 @@ class Measure:
         plt.show()
 
     def save_measure_data(self, source='local'):
+        if self.use_database:
+            return self._save_measure_data_to_db(source)
+        else:
+            return self._save_measure_data_to_file(source)
+    
+    def _save_measure_data_to_db(self, source='local'):
+        """Save measurement data to database."""
+        if source == 'local': 
+            frames_list = self.frame_names
+        elif source == 'drive': 
+            frames_list = sorted(file.name for file in self.drive_path.iterdir() 
+                               if file.is_file() and file.suffix.lower() == '.jpg')
+        else: 
+            raise ValueError("source must be either 'local' or 'drive'")
+        
+        for frame_name in tqdm(frames_list):
+            self.detector.set_frame(frame_name)
+            self.detector.detect_disks()
+            centers = self.detector.get_circles_positions()
+            radii = self.detector.get_circles_radii()
+            statistics = self.detector.calculate_radii_statistics()
+            
+            frame_id = self.db_manager.create_frame(self.measurement_id, frame_name)
+            self.db_manager.save_detection_data(frame_id, centers, radii, statistics)
+    
+    def _save_measure_data_to_file(self, source='local'):
+        """Original file-based saving method."""
         if not (self.path_setting == 'manual' or source == self.path_setting):
             raise ValueError("source must be either 'local' or 'drive' and must match the path_setting of the Measure object")
         df_data = []
@@ -325,11 +358,16 @@ class Measure:
         save_path = (self.path / f"data_{source}_{self.name}.pkl").resolve()
         df.to_pickle(save_path)
 
-
-    def load_measure_data(self, source='local'):
+    def load_pickled_data(self, source='local'):
         if source not in ["local", "drive", "manual"]:
             raise ValueError("source must be either 'local', 'drive' or 'manual")
         load_path = (self.path / f"data_{source}_{self.name}.pkl").resolve()
         return pd.read_pickle(load_path)
+    
+    def load_measure_data(self, source='local'):
+        if self.use_database:
+            return self.db_manager.load_detection_data(self.name)
+        else:
+            return self.load_pickled_data(source)
 
 

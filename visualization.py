@@ -6,6 +6,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from measurements_detectors import Measure
 from project_tools import create_product_name
 from detection_lib import PIXEL_TO_MM_RATIO, LARGE_DISK_RADIUS, TOTAL_SYSTEM_RADIUS
+from database_manager import DatabaseManager
 
 class Plotter:
     def __init__(self, measure: Measure, source: str):
@@ -14,18 +15,30 @@ class Plotter:
         self.vector_field_path = self.measure.get_vector_field_path()
         self.graph_path = self.measure.get_graph_path()
         self.source = source
-
+        self.use_database = getattr(measure, 'use_database', False)
+        if self.use_database:
+            self.db_manager = DatabaseManager()
+    
     def product_name(self, first_frame_name, second_frame_name):
         return create_product_name(self.measure_name, first_frame_name, second_frame_name, self.source)
     
     def load_vector_field(self, first_frame_name, second_frame_name):
-        product_name = self.product_name(first_frame_name, second_frame_name)
-        data = pd.read_csv((self.vector_field_path / f"{product_name}.txt").resolve(), sep="\t")
-        if self.source == "Piv": 
-            data.rename(columns={"# x": "x"}, inplace=True)
-            mask = data['flags'] == 0
-            data = data[mask]            
-        return {col: data[col].to_numpy() for col in data.columns}
+        if self.use_database:
+            try:
+                return self.db_manager.load_vector_field(
+                    self.measure_name, first_frame_name, second_frame_name, self.source
+                )
+            except FileNotFoundError:
+                print(f"Vector field not found in database for {first_frame_name}_{second_frame_name}")
+                raise
+        else:
+            product_name = self.product_name(first_frame_name, second_frame_name)
+            data = pd.read_csv((self.vector_field_path / f"{product_name}.txt").resolve(), sep="\t")
+            if self.source == "Piv": 
+                data.rename(columns={"# x": "x"}, inplace=True)
+                mask = data['flags'] == 0
+                data = data[mask]            
+            return {col: data[col].to_numpy() for col in data.columns}
 
     def _plot_displacement_by_rings_helper(self, ax: plt.Axes, measure_statistics, first_frame_num, second_frame_num):
         ax.set_xlabel("radius [mm]")
