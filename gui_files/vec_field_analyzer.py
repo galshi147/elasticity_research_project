@@ -17,6 +17,8 @@ from gui_files.gui_scripts import VecFieldAnalyzerScripter
 from gui_files.gui_resources import BaseAnalysisWindow ,SPECIAL_SPINBOX_STYLE, MEASURE_TITLE_STYLE
 from gui_files.dialogs import DisplacementVideoDialog
 
+from database_manager import DatabaseManager
+
 MAX_RINGS_NUM = 500
 DEFAULT_RINGS_NUM = 100
 MAX_RING_JUMP = 100
@@ -28,9 +30,14 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
     def __init__(self, measure: Measure, source: str):
         super().__init__(measure, source, scripter=VecFieldAnalyzerScripter)
         self.setWindowTitle("Vector Field Analyzer (PySide6)")
+        
+        # Use optimized database manager
+        self.db_manager = DatabaseManager()
+        self.db_manager.register_measurement_files(measure)
+        
         self.plotter = Plotter(measure, source)
         self.calculator = Calculator(measure)
-        self.measure_stat = self.measure.load_measure_data(source='drive')["statistic"]
+        self.measure_stat = self.db_manager.get_detection_data_fast(measure.get_name())["statistic"]
         self.vector_field = {}
         self.add_rings = True
         self.init_ui()
@@ -155,20 +162,15 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
             self.save_video_btn.setEnabled(True)  # Re-enable the button after saving
             QApplication.processEvents()  # Update UI
 
-    def load_vector_field_data(self, first_frame_name, second_frame_name) -> tuple:
-        """_summary_
-
-        Args:
-            first_frame_name (_type_): _description_
-            second_frame_name (_type_): _description_
-
-        Returns:
-            tuple[np,array]: x, y, u, v
-        """
+    def load_vector_field_data(self, first_frame_name, second_frame_name):
+        """Load vector field data using optimized database manager"""
         try:
-            return self.plotter.load_vector_field(first_frame_name, second_frame_name)
+            return self.db_manager.load_vector_field_fast(
+                self.measure.get_name(), first_frame_name, second_frame_name, self.source
+            )
         except FileNotFoundError:
-            print(f"==== check existance of {first_frame_name}_{second_frame_name} in vector_field folder of measure: {self.measure.get_name()} ====")
+            print(f"Vector field not found: {first_frame_name}_{second_frame_name}")
+            return None
 
     def calculate_displacement_stats(self, x: np.array, y: np.array, u, v) -> tuple:
         """_summary_
@@ -253,5 +255,4 @@ class VectorFieldAnalyzer(BaseAnalysisWindow):
             self.frame2.valueChanged.disconnect(self.schedule_update_plot)
             self.rings_spin.valueChanged.disconnect(self.schedule_update_plot)
 
-    
-    
+

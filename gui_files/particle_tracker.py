@@ -12,17 +12,34 @@ from measurements_detectors import Measure
 from gui_files.gui_scripts import ParticleTrackerScripter
 from gui_files.gui_resources import BaseAnalysisWindow, MEASURE_TITLE_STYLE
 from gui_files.dialogs import AnimateTrajDialog
+from database_manager import DatabaseManager
 
 class ParticleTracker(BaseAnalysisWindow):
     def __init__(self, measure: Measure, source):
         super().__init__(measure, source, scripter=ParticleTrackerScripter)
         self.setWindowTitle("Particle Tracker")
         self.measure = measure
-        self.measure_data = self.measure.load_measure_data(source='drive')
-        self.kdt = Kdt(measure)
+        
+        # Use optimized database manager
+        self.db_manager = DatabaseManager()
+        
+        # Register measurement for fast access
+        self.db_manager.register_measurement_files(measure)
+        
+        # Try to load cached trajectories first
+        self.all_trajectories = self.db_manager.load_trajectories(measure.get_name())
+        if self.all_trajectories is None:
+            print("Building trajectories (this may take a moment)...")
+            self.kdt = Kdt(measure)
+            self.all_trajectories = self.kdt.build_trajectories()
+            # Cache for next time
+            self.db_manager.cache_trajectories(measure.get_name(), self.all_trajectories)
+            print("Trajectories cached for faster future loading")
+        else:
+            print("Loaded cached trajectories - ready to go!")
+        
         self.plotter = Plotter(measure, source)
         self.calculator = Calculator(measure)
-        self.all_trajectories = self.kdt.build_trajectories()
         self.init_ui()
         self._connect_zoom()
 
