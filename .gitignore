@@ -1,4 +1,5 @@
 measurements/
+db/
 .venv/
 *.pyc
 __pycache__/
