@@ -5,7 +5,7 @@ import matplotlib.cm as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from measurements_detectors import Measure
 from project_tools import create_product_name
-from detection_lib import PIXEL_TO_MM_RATIO, LARGE_DISK_RADIUS, TOTAL_SYSTEM_RADIUS
+from detection_lib import PIXEL_TO_MM_RATIO, LARGE_DISK_RADIUS, SMALL_DISK_RADIUS, TOTAL_SYSTEM_RADIUS
 
 class Plotter:
     def __init__(self, measure: Measure, source: str):
@@ -28,25 +28,30 @@ class Plotter:
         return {col: data[col].to_numpy() for col in data.columns}
 
     def _plot_displacement_by_rings_helper(self, ax: plt.Axes, measure_statistics, first_frame_num, second_frame_num):
-        ax.set_xlabel("radius [mm]")
-        ax.set_ylabel("components displacement (normalized)")
+        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.5)
+        ax.axhline(y=SMALL_DISK_RADIUS, color='gray', linestyle='--', linewidth=0.5)
+        ax.axhline(y=-SMALL_DISK_RADIUS, color='gray', linestyle='--', linewidth=0.5)
+        ax.axhline(y=LARGE_DISK_RADIUS, color='gray', linestyle='--', linewidth=0.5)
+        ax.axhline(y=-LARGE_DISK_RADIUS, color='gray', linestyle='--', linewidth=0.5)
         # extra_data = self.measure.get_measure_statistics()
         stat_f1, stat_f2 = measure_statistics[int(first_frame_num)], measure_statistics[int(second_frame_num)]
         area_fraction_str = f"area fraction: {round(0.5*(stat_f1['areal_fraction'] + stat_f2['areal_fraction']), 2)} %"
         ax.plot([], [], alpha=0, label=area_fraction_str)
         ax.legend()
+        ax.set_xlabel("radius [mm]")
+        ax.set_ylabel("components displacement [mm] (normalized)")
         return ax
     
 
     def plot_displacement_by_rings(self, ax: plt.Axes, measure_statistics, first_frame_name, second_frame_name, radii, rad_disp, tan_disp, save=False, show=True):
         # product_name = self.product_name(first_frame_name, second_frame_name)
         # fig, ax = plt.subplots()
+        rad_disp_mm, tan_disp_mm = rad_disp / PIXEL_TO_MM_RATIO, tan_disp / PIXEL_TO_MM_RATIO  # Convert to mm
         first_frame_num, second_frame_num = first_frame_name[4:-4], second_frame_name[4:-4]
-        ax.scatter(radii, rad_disp, linewidths=0.5, marker=".", alpha=0.5, color="orange", label=r"$\hat{r}$")
-        ax.plot(radii, rad_disp, color="orange", label=r"$\hat{r}$")
-        ax.scatter(radii, tan_disp, linewidths=0.5, marker=".", alpha=0.5, color="green", label=r"$\hat{\theta}$")
-        ax.plot(radii, tan_disp, color="green", label=r"$\hat{\theta}$")
-        ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.5)
+        ax.scatter(radii, rad_disp_mm, linewidths=0.5, marker=".", alpha=0.5, color="orange", label=r"$\hat{r}$")
+        ax.plot(radii, rad_disp_mm, color="orange", label=r"$\hat{r}$")
+        ax.scatter(radii, tan_disp_mm, linewidths=0.5, marker=".", alpha=0.5, color="green", label=r"$\hat{\theta}$")
+        ax.plot(radii, tan_disp_mm, color="green", label=r"$\hat{\theta}$")
         ax.set_title(f"displacement field of: {first_frame_num} & {second_frame_num}", pad=15)
         ax = self._plot_displacement_by_rings_helper(ax, measure_statistics, first_frame_num, second_frame_num)
         # if save: plt.savefig(f"{str(self.graph_path)}/disp_{product_name}.png")
@@ -135,8 +140,12 @@ class Plotter:
         rgb = np.repeat(base_colors[np.newaxis, :, :3], num_frames, axis=0)  # (num_frames, num_particles, 3)
         alpha = np.repeat(alphas[:, np.newaxis], num_particles, axis=1)[..., np.newaxis]  # (num_frames, num_particles, 1)
         colors_all = np.concatenate([rgb, alpha], axis=2).reshape(-1, 4)  # (num_frames*num_particles, 4)
-        # Flatten x and y for scatter
-        ax.scatter(x.flatten(), y.flatten(), c=colors_all, s=20, marker='o', edgecolor='black', linewidth=0.3, alpha=0.7)
+        
+        # Flatten and mask out (0, 0) points
+        x_flat = x.flatten()
+        y_flat = y.flatten()
+        mask = ~((x_flat == 0) & (y_flat == 0))
+        ax.scatter(x_flat[mask], y_flat[mask], c=colors_all[mask], s=20, marker='o', edgecolor='black', linewidth=0.3, alpha=0.7)
 
         circle = plt.Circle((0, 0), TOTAL_SYSTEM_RADIUS, color='gray', fill=False, alpha=0.5)
         ax.add_patch(circle)

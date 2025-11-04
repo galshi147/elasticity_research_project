@@ -26,7 +26,7 @@ class Calculator():
                 else: # avoid Nan values in case mask is empty
                     rad_disp = np.append(rad_disp, 0)
                     tan_disp = np.append(tan_disp, 0)
-            
+
             return radii, dr, rad_disp, tan_disp
 
 

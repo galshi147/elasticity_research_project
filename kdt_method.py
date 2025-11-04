@@ -68,10 +68,9 @@ class Kdt:
     
     
     def build_trajectories(self):
-        # Build trajectories for each particle across frames
-        positions = self.measure_data['centers']
+        """Build trajectories for each particle across frames"""
         # Efficiently pad centers arrays with 0 so all frames have the same number of particles
-        centers_arrays = [np.vstack(centers) for centers in positions]
+        centers_arrays = [np.vstack(centers) for centers in self.measure_data['centers']]
         max_particles = max(arr.shape[0] for arr in centers_arrays)
         # Preallocate output array with 0
         positions = np.full((len(centers_arrays), max_particles, 2), 0, dtype=float)
@@ -112,24 +111,24 @@ class Kdt:
         positions = self.measure_data['centers']
         centers_arrays = [np.vstack(centers) for centers in positions]
         
-        # Calculate the true center from all particle data
+        # Calculate the mean center from all particle data
         all_particles = np.vstack(centers_arrays)
-        true_center = np.mean(all_particles, axis=0)
+        mean_center = np.mean(all_particles, axis=0)
         
         print(f"Frame center from detector (x,y): {self.frame_center}")
-        print(f"Calculated true center (x,y): {true_center}")
-        
+        print(f"Calculated mean center (x,y): {mean_center}")
+
         # IMPORTANT: Ensure consistent (x,y) coordinate system
         # self.frame_center is already in (x,y) format from OpenCV
         # particle centers should also be in (x,y) format
-        
-        # Start with first frame (centered using true center)
-        first_frame = centers_arrays[0] - true_center  # Remove the coordinate swap
+
+        # Start with first frame (centered using mean center)
+        first_frame = centers_arrays[0] - mean_center  # Remove the coordinate swap
         trajectories = [first_frame]
         
         for frame_idx in range(1, len(centers_arrays)):
             prev_particles = trajectories[-1]
-            curr_particles = centers_arrays[frame_idx] - true_center  # Use true center consistently
+            curr_particles = centers_arrays[frame_idx] - mean_center  # Use mean center consistently
             
             if len(prev_particles) == 0 or len(curr_particles) == 0:
                 trajectories.append(curr_particles)
