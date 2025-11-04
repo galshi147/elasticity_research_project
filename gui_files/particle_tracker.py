@@ -22,7 +22,7 @@ class ParticleTracker(BaseAnalysisWindow):
         self.kdt = Kdt(measure)
         self.plotter = Plotter(measure, source)
         self.calculator = Calculator(measure)
-        self.all_trajectories = self.kdt.build_trajectories()
+        self.all_trajectories = self.kdt.build_trajectories_robust()
         self.init_ui()
         self._connect_zoom()
 

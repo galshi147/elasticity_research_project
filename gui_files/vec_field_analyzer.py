@@ -18,7 +18,7 @@ from gui_files.gui_resources import BaseAnalysisWindow ,SPECIAL_SPINBOX_STYLE, M
 from gui_files.dialogs import DisplacementVideoDialog
 
 MAX_RINGS_NUM = 500
-DEFAULT_RINGS_NUM = 100
+DEFAULT_RINGS_NUM = 50
 MAX_RING_JUMP = 100
 DEFAULT_RINGS_JUMP = 1
 
